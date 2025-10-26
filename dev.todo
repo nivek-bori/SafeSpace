@@ -1,66 +1,87 @@
-Todo:
-	▫ List out all database interactions required, go through user flows @high
-		▫ Sign up -> create db user
-		▫ Add rating
-			▫ If new location -> create new location, store location, create new rating
-			▫ If old location -> create new rating
-		▫ Load all locations + ratings connected to them
+TODO:
+  ✔ api/auth @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(27s)
+  ✔ api/profile @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(31s)
+  ✔ api/location @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(49s)
+  ✔ api/rating @started(25-10-20 16:42) @done(25-10-20 16:42) @lasted(23s)
+  ✔ components/auth/AuthProtector soft require auth @started(25-10-25 20:10) @done(25-10-25 20:10) @lasted(44s)
+  ▫ components/map/MapMenu sidebar @started(25-10-24 17:01)
+  ▫ components/map/
 
-Project:
-	✔ List out problems that underrepresented woman face @done(25-07-19 10:23) @started(25-07-19 10:23)
-	✔ List out solutions @started(25-07-19 10:23) @done(25-07-19 10:23) @lasted(51s)
-	✔ Choose solution to implement in code @started(25-07-19 10:23) @done(25-07-19 10:23) @lasted(53s)
-		▫ Solution: Product that allows travelling women to document safe/unsafe passages or places
-	✔ List out mvp features @started(25-07-19 10:24) @done(25-07-19 10:35) @lasted(11m22s)
-		▫ Home page popup with information
-		▫ User can view and filter rated locations near them
-			▫ Rate locations cluster based on proximity
-		▫ User can add rated locations (requires account)
-			▫ Tap and rate
-			▫ Current location rate
-		▫ Account flow
+Sidebar:
+  ▫ Location: components/map/MapMenu
+  ▫ SidebarWrapper: handles nav bar and also does title and latlng subtext
+  ▫ HiddenSidebar: a simple 'open sidebar' button
+  ▫ 
 
-		▫ Rate location: x/5 rating, reason, (maybe) image, bad rating reports
-	✔ Map out user flow @started(25-07-19 10:35) @done(25-07-19 10:35) @lasted(23s)
-		▫ User wants safety of route/location: website homepage
-		▫ User wants to add rated location: website homepage -> find location + add rating button -> signup/signin -> can add rating
-	✔ Make software requirements document @started(25-07-19 10:38) @done(25-07-19 11:10) @lasted(32m57s)
-		Map:
-			✔ Visualize map @started(25-07-19 11:59) @done(25-07-19 11:59) @lasted(42s)
-			✔ Locations colored by rating @started(25-07-19 13:17) @done(25-07-19 13:17) @lasted(23s)
-			✔ Tap on location: Popup of rated location @started(25-07-19 13:17) @done(25-07-19 13:17) @lasted(25s)
-			✔ Cluster locations based on proximity @started(25-07-19 15:11) @done(25-07-19 15:11) @lasted(52s)
-			Technologies:
-				▫ Maps JavaScript API (Maps tier): 1, 2, 3
-				▫ Library googlemaps/markercluster: 4
-				
-		Map helpders:
-			✔ Convert user location to map location @started(25-07-19 15:11) @done(25-07-19 15:11) @lasted(57s)
-			▫ Convert address to map location
-			Technologies:
-				▫ Geocoding API (Places tier): 1, 2
+User Requirements:
+	▫ Create new location + rating
+	▫ Create rating on old location
+	▫ Input Pa & Pb -> display route + route safety
 		
-		Location popup:
-			▫ Info: Average rating, description, best time, worst time
-			▫ Button: More button, escape button
+Code Requirements:
+	▫ Map
+			onMapClick() -> handleMapClick()
+      renderMarkers(Location[])
+      renderRoute()
+	▫ Create Rating State
+		▫ Keep track of click location
+			▫ clickLocation (index in locations) = location: number | null
+			▫ clickPosition = {lng: number, lat: number}
+		▫ Search a location & display
+			▫ location
+			▫ handleLocationSearch()
+			▫ <input> w/ Autocomplete
 
-		Rating locations:
-			▫ Tap location/address, if no location -> create location & redirect to add rating of location
-			▫ If location -> redirect to add rating of location
-			▫ Rating input
-			▫ Description input, (maybe) 'common descriptions' dropdown
-			▫ Time input w/ now button
-			▫ Cancel & save button
+/* 
 
-		Database:
-			▫ Auth user
-			▫ User
-				▫ User's ratings
-			▫ Ratings
-				▫ User author
-				▫ Ratings
-				▫ Location
-				▫ Times
-				▫ Descriptions
-	▫ Start programming @started(25-07-19 11:11)
+USER REQUIREMENTS:
+  Create new location + rating
+  Create rating on old location
+  Input Pa & Pb -> display route + route safety
 
+CODE REQUIREMENTS:
+Map needs to render
+
+Render location markers
+  Require: Location[]
+Render location info
+  Require: Location
+  LocationComponent(Location)
+
+Render ratings in location info
+  Require: Location.Ratings
+  RatingComponent(Location)
+
+Render Point A (Pa) to Point B (Pb) selection
+Create route from Pa to Pb
+Render route
+Function for calculating safety of route
+  Weighted by distance and safety strength
+
+Get click position for new location
+Get click location for new rating on location
+
+Architecture:
+  MapComponent:
+    params:
+      handleMapClick()
+    internal functions:
+      onMapClick() -> handleMapClick()
+      renderMarkers(Location[])
+      renderRoute()
+
+  Map:
+    params:
+    internal states:
+      locations: Location[]
+      route: Google.Route
+      trackClick: boolean // do not render click info
+      sidebarState: { shown: boolean, state: 'routing' | 'createRating' }
+    internal functions:
+      getPoint()
+      getRoute()
+      calculateRouteSafety()
+      loadLocations()
+      createRating()
+      toggleTrackClick() <button>
+*/

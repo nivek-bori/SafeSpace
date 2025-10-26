@@ -1,88 +1,106 @@
-// POSt for getting rating
-// POST for creating rating
+import { Safety } from "@/lib/prisma/generated/prisma";
+import { verifyBody } from "@/lib/util/api";
+import { getUserServer, parseError } from "@/lib/util/server_util";
+import { DefaultAPIRes } from "@/types/api_types";
+import { ReducedLocation } from "@/types/types";
+import { NextResponse } from "next/server";
 
-// GET for getting location information
-// POST for creating location
-
-import { NextResponse } from 'next/server';
-
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { isAuthorized } from '@/lib/util/utils';
-import prisma from '@/lib/prisma';
-import { RatingCreateRet, RatingGetRet } from '@/types';
-import { parseError } from '@/lib/util/server_util';
-
-export async function GET(request: Request) {
-  try {
-    const ratings = await prisma.rating.findMany({
-      include: {
-        user: true,
-      },
-    });
-
-    return NextResponse.json({ status: 'success', ratings }, { status: 200 });
-  } catch (error: any) {
-    console.log('Route: /api/Rating error', error);
-
-    const retBody: RatingGetRet = { status: 'error', message: 'Server error. Please refresh or try again later' };
-    return NextResponse.json(retBody, { status: 500 });
+type PostRequestFull = {
+  userId: string,
+  locationData: string | ReducedLocation, // id or minium required data
+  ratingData: {
+    ratingId: string | null,
+    safety: Safety,
+    description: string,
   }
 }
 
 export async function POST(request: Request) {
-  // Request parameter verification
-  const body = await request.json();
-  const userId = typeof body.userId === 'string' ? body.userId : String(body.userId);
-  const locationId = typeof body.locationId === 'string' ? body.locationId : String(body.locationId);
-  const value = Number(body.rating);
-  const description = body.description !== undefined ? String(body.description) : undefined;
-  const time = new Date(body.time);
-  time.setSeconds(0, 0);
-
-  if (!body) {
-    console.error('Please provide all required information');
-    const retBody: RatingCreateRet = { status: 'error', message: 'Please provide all required information' };
-    return NextResponse.json(retBody, { status: 400 });
-  }
-  if (
-    typeof userId !== 'string' ||
-    !userId ||
-    typeof locationId !== 'string' ||
-    !locationId ||
-    Number.isNaN(value) ||
-    value < 1 ||
-    value > 5 ||
-    !(time instanceof Date) ||
-    isNaN(time.getTime()) ||
-    (description !== undefined && typeof description !== 'string')
-  ) {
-    console.error('Please provide information of correct data type');
-    const retBody: RatingCreateRet = { status: 'error', message: 'Please provide information of correct data type' };
-    return NextResponse.json(retBody, { status: 400 });
-  }
-
   try {
-    console.log('user id', typeof userId, userId);
-    // Create the Rating using Prisma
-    const newRating = await prisma.rating.create({
-      data: {
-        userId: userId,
-        locationId,
-        value,
-        description,
-        time,
+    const {supabase, user, error: user_error} = await getUserServer(request);
+    if (user_error) return user_error;
+
+    // Data
+    const body = await request.json();
+
+    const props: PostRequestFull = {
+      userId: user.id,
+      locationData: body.locationId || {
+        latitude: body.latitude,
+        longitude: body.longitude,
+        address: body.address || null,
       },
+      ratingData: {
+        ratingId: body.ratingId,
+        safety: body.safety,
+        description: body.description,
+      }
+    };
+    const props_error = verifyBody(props, 'api/rating post');
+    if (props_error) return props_error;
+
+    const { userId, locationData, ratingData } = props;
+
+    // Create/Get location
+    let locationId = null;
+    
+    if (typeof locationData === 'string') { // location exists -> get location
+      const location = await prisma.location.findUnique({
+        where: {
+          id: locationData,
+        }
+      });
+
+      if (!location) {
+        console.log(`api/rating post error: Provided location id not found ${locationData}`);
+        return NextResponse.json<DefaultAPIRes>({ status: 'error', message: 'There was an issue saving your rating' }, {status: 400});
+      }
+
+      locationId = locationData;
+    } else {
+      // location doesn't exist -> create location
+      const { latitude, longitude, address } = locationData;
+
+      const dataQuery: any = {
+        latitude: latitude,
+        longitude: longitude,
+      }
+      if (address) dataQuery.address = address;
+
+      const location = await prisma.location.create({
+        data: dataQuery,
+        select: {
+          id: true,
+        }
+      })
+
+      locationId = location.id;
+    }
+
+    // Create/edit rating on location
+    const { ratingId, safety, description } = ratingData;
+
+    const rating = await prisma.rating.upsert({
+      where: {
+        id: ratingId || '',
+      },
+      update: {
+        safety: safety,
+        description: description,
+      },
+      create: {
+        safety: safety,
+        description: description,
+        profileId: userId,
+        locationId: locationId,
+      }
     });
 
-    const retBody: RatingCreateRet = {
-      status: 'success',
-      message: 'Rating created successfully',
-    };
-    return NextResponse.json(retBody, { status: 200 });
-  } catch (error: any) {
-    console.log('Route: /api/rating error', parseError(error.message, error.code));
-
-    const retBody: RatingCreateRet = { status: 'error', message: 'Server error. Please refresh or try again later' };
-    return NextResponse.json(retBody, { status: 500 });
+		// Logic
+		return NextResponse.json<DefaultAPIRes>({status: 'success', message: ''});
+  } catch (e: any) {
+    console.log('api/rating post error')
+    await parseError(e.message, e.code);
+    return NextResponse.json<DefaultAPIRes>({status: 'error', message: 'There was an issue MESSAGE'});
   }
 }

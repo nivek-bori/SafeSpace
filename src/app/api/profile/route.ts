@@ -1,38 +1,40 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { verifyBody } from "@/lib/util/api";
+import { getUserServer, parseError } from "@/lib/util/server_util";
+import prisma from '@/lib/prisma/prisma';
+import { DefaultAPIRes, ProfileGetRes } from "@/types/api_types";
+import { NextResponse } from "next/server";
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { CreateUserArgs, CreateUserRet } from '@/types';
+type GetPropsFull = {
+  userId: string;
+}
 
-// create db user after google sign up
-export async function POST(request: Request) {
-	// Request parameter verification
-	const body = await request.json();
-	const { userId, email, name }: CreateUserArgs = body;
+export async function GET(request: Request) {
+  try {
+    const {supabase, user, error: user_error} = await getUserServer(request);
+    if (user_error) return user_error;
 
-	if (!userId || !email) {
-		const retBody: CreateUserRet = { status: 'error', message: 'Please provide all required information' };
-		return NextResponse.json(retBody, { status: 400 });
-	}
+    const props: GetPropsFull = { userId: user.id };
+    const props_error = verifyBody(props, 'api/profile get');
+    if (props_error) return props_error;
 
-	try {
-		const dbUser = await prisma.user.create({
-			data: {
-				id: userId,
-				email,
-				name
-			}
-		});
+    const { userId } = props;
 
-		const retBody: CreateUserRet = { 
-			status: 'success', 
-			message: 'Successfully signed up with Google'
-		};
-		return NextResponse.json(retBody, { status: 200 });
-	} catch (error: any) {
-		console.log('Route: /api/users/create error', error);
+    const profile = await prisma.profile.findUnique({
+      where: {
+        id: userId
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      }
+    });
 
-		const retBody: CreateUserRet = { status: 'error', message: 'Server error. Please refresh or try again later' };
-		return NextResponse.json(retBody, { status: 500 });
-	}
+    return NextResponse.json<ProfileGetRes>({status: 'success', message: '', profile: profile});
+  } catch (e: any) {
+    console.log('api/profile get error')
+    parseError(e.message, e.code);
+    return NextResponse.json<DefaultAPIRes>({ status: 'error', message: 'There was an issue loading the profile' }, {status: 500});
+  }
 }

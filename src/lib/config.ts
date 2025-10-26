@@ -1,3 +1,5 @@
+import { UserRole } from "@/types/types";
+
 // formatted env variables
 export const config = {
   app: {
@@ -25,4 +27,10 @@ export const config = {
     client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
     client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
   },
+};
+
+// Middleware
+export const privateRoutes: Record<string, UserRole> = {
+  '/developer': 'ADMIN',
+  '/': 'USER'
 };

@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/components/auth/auth-provider';
-import Navigation from '@/components/layout/navbar';
+import { AuthProvider } from '@/components/auth/AuthProvider';
+import AuthProtector from '@/components/auth/AuthProtector';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -13,6 +13,11 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const metadata = {
+  title: 'SafeSpace - Community Safety Ratings',
+  description: 'A community-driven platform for sharing safety ratings of locations',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,11 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="max-h-screen w-full">
-      <body className={`${geistSans.variable} ${geistMono.variable} flex max-h-full w-full flex-col antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased w-full h-full`}>
         <AuthProvider>
+          <AuthProtector>{children}</AuthProtector>
+          
           <script src="https://accounts.google.com/gsi/client" async defer></script>
-          <Navigation></Navigation>
-          <div className='flex flex-1'>{children}</div>
         </AuthProvider>
       </body>
     </html>

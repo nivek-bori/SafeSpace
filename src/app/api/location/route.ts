@@ -1,70 +1,81 @@
-// GET for getting location information
-// POST for creating location
 
-import { NextResponse } from 'next/server';
+import { verifyBody } from "@/lib/util/api";
+import { getUserServer, parseError } from "@/lib/util/server_util";
+import { DefaultAPIRes, LocationGetRes } from "@/types/api_types";
+import { RelationLocation } from "@/types/types";
+import { NextResponse } from "next/server";
 
-import prisma from '@/lib/prisma';
-import { LocationCreateRet, LocationGetRet } from '@/types';
+type GetRequestFull = {
+  locationId: string | null;
+}
 
 export async function GET(request: Request) {
   try {
-    const locations = await prisma.location.findMany({
-      include: {
-        ratings: {
-          include: {
-            user: true, // This will include the related user for each rating
-          },
+    // Data
+    const { searchParams } = new URL(request.url);
+    const SP_locationId = searchParams.get('locationId');
+
+    const props: GetRequestFull = { locationId: SP_locationId };
+    const props_error = verifyBody(props, 'api/location get');
+    if (props_error) return props_error;
+
+    const { locationId } = props;
+
+    if (!locationId) {
+      // If no locationId -> get all locations
+      const locations = await prisma.location.findMany({
+        select: {
+          id: true,
+          latitude: true,
+          longitude: true,
+          address: true,
+          ratings: {
+            select: {
+              id: true,
+              safety: true,
+              description: true,
+            }
+          }
+        }
+      });
+
+      return NextResponse.json<LocationGetRes>({ status: 'success', message: '', locations: locations });
+    } else {
+      // If locationId -> get locationId location
+      if (locationId.trim() === '' || locationId.trim() === 'undefined') {
+        console.log('api/location get error: locationId is null/empty');
+        return NextResponse.json<LocationGetRes>({ status: 'error', message: '' }, {status: 400});
+      }
+
+      const location = await prisma.location.findUnique({
+        where: {
+          id: locationId,
         },
-      },
-    });
+        select: {
+          id: true,
+          latitude: true,
+          longitude: true,
+          address: true,
+          ratings: {
+            select: {
+              id: true,
+              safety: true,
+              description: true,
+            }
+          }
+        }
+      });
 
-    return NextResponse.json({ status: 'success', locations }, { status: 200 });
-  } catch (error: any) {
-    console.log('Route: /api/location error', error);
-
-    const retBody: LocationGetRet = { status: 'error', message: 'Server error. Please refresh or try again later' };
-    return NextResponse.json(retBody, { status: 500 });
-  }
-}
-
-export async function POST(request: Request) {
-  // Request parameter verification
-  const body = await request.json();
-  const name = body.name;
-  const description = body.description;
-  const latitude = Number(body.latitude);
-  const longitude = Number(body.longitude);
-
-  if (!body) {
-    const retBody: LocationCreateRet = { status: 'error', message: 'Please provide all required information' };
-    return NextResponse.json(retBody, { status: 400 });
-  }
-  if (typeof name !== 'string' || typeof description !== 'string' || Number.isNaN(latitude) || Number.isNaN(longitude)) {
-    const retBody: LocationCreateRet = { status: 'error', message: 'Please provide information of correct data type' };
-    return NextResponse.json(retBody, { status: 400 });
-  }
-
-  try {
-    // Create the location using Prisma
-    const newLocation = await prisma.location.create({
-      data: {
-        name,
-        description,
-        latitude,
-        longitude,
-      },
-    });
-
-    const retBody: LocationCreateRet = {
-      status: 'success',
-      message: 'Location created successfully',
-      locationId: newLocation.id,
-    };
-    return NextResponse.json(retBody, { status: 200 });
-  } catch (error: any) {
-    console.log('Route: /api/route name error', error);
-
-    const retBody: LocationCreateRet = { status: 'error', message: 'Server error. Please refresh or try again later' };
-    return NextResponse.json(retBody, { status: 500 });
+      if (!location) {
+        console.log(`api/location get error: locationId location not found ${locationId}`);
+        return NextResponse.json<LocationGetRes>({ status: 'error', message: ''}, {status: 400})
+      }
+      
+      return NextResponse.json<LocationGetRes>({ status: 'success', message: '', locations: [location] });
+    }
+  } catch (e: any) {
+    console.log('api/location get error')
+    await parseError(e.message, e.code);
+    return NextResponse.json<LocationGetRes>({status: 'error', message: 'There was an issue loading location data'}, { status: 500});
   }
 }

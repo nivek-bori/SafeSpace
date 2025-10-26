@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { Role } from '@/types';
-import { isAuthorized } from '@/lib/util/utils';
+
+import { isAuthorized } from '../util/client_util';
+import { UserRole } from '@/types/types';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -46,10 +47,10 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const privateRoutes: Record<string, Role> = {
-    '/api': 'user',
-    '/dashboard': 'user',
-    '/developer': 'admin',
+  const privateRoutes: Record<string, UserRole> = {
+    '/api': 'USER',
+    '/dashboard': 'USER',
+    '/developer': 'ADMIN',
   };
 
   const pathname = request.nextUrl.pathname;
