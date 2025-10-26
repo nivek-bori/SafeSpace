@@ -1,4 +1,4 @@
-import { Profile, Rating, Location } from "@/lib/prisma/generated/prisma";
+import { Profile, Rating, Location, Safety } from "@/lib/prisma/generated/prisma";
 
 export type UserRole = 'ADMIN' | 'USER' | 'GUEST';
 
@@ -29,3 +29,38 @@ export type RelationRating =
     profile?: RelationProfile;
     location?: RelationLocation;
   }
+
+// Safety = "NEG_TWO" | "NEG_ONE" | "ZERO" | "ONE" | "TWO"
+export function convertSafetyToNumber(safety: Safety): number {
+  switch (safety) {
+    case "NEG_TWO":
+      return -2;
+    case "NEG_ONE":
+      return -1;
+    case "ZERO":
+      return 0;
+    case "ONE":
+      return 1;
+    case "TWO":
+      return 2;
+    default:
+      throw new Error("Invalid Safety value");
+  }
+}
+
+export function convertNumberToSafety(safetyNum: number): Safety {
+  switch (safetyNum) {
+    case -2:
+      return "NEG_TWO";
+    case -1:
+      return "NEG_ONE";
+    case 0:
+      return "ZERO";
+    case 1:
+      return "ONE";
+    case 2:
+      return "TWO";
+    default:
+      throw new Error("Invalid safety number");
+  }
+}

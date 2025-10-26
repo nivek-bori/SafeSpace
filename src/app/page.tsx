@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, use, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import MapMenuComponent from '@/components/map/MapMenu';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -9,78 +9,110 @@ import { LocationGetRes } from '@/types/api_types';
 import { RelationLocation } from '@/types/types';
 import Loading from '@/components/ui/Loading';
 import { supabase } from '@/lib/supabase/client';
+import { Session } from '@supabase/supabase-js';
+import { checkIsAppPPREnabled } from 'next/dist/server/lib/experimental/ppr';
 
 export default function Home() {
   const { session } = useAuth();
+  const sessionRef = useRef(session);
 
   const [locations, setLocations] = useState<RelationLocation[] | null>(null);
-  const subscription = useRef<any>(null);
 
-  const getLocationData = useCallback(() => {
-    async function exec() {
-      const res = await request<LocationGetRes>({
-        type: 'GET',
-        route: 'api/location',
-        body: {},
-        session: session.data,
-      });
+  // Used to ensure both location and subscription exist
+  const checkLocationIntervalRef = useRef<any>(null);
+  const loadLocationStateRef = useRef<'loading' | 'loaded' | 'unloaded'>('unloaded');
+  const subscriptionRef = useRef<any>(null);
 
-      // TODO: Notification
-      console.log('NOTIFY: ', res.status, res.message, 'locations', res.locations);
-      if (res.status === 'success' && res.locations) {
-        setLocations(res.locations);
-      }
-    }
-    exec();
-  }, [session.data, setLocations]);
-
-  // Load locations and subscribe to locations
+  // Track session data in ref
   useEffect(() => {
-    async function exec() {
-      try {
-        if (session.loading) return;
+    sessionRef.current = session;
+  }, [locations]);
+  // // Track location data state in ref
+  // useEffect(() => {
+  //   if (loadLocationStateRef.current !== 'loading') {
+  //     loadLocationStateRef.current = (location) ? 'loaded' : 'unloaded';
+  //   }
+  // }, [locations]);
 
-        // If no locations -> load locations
-        if (!locations) {
-          getLocationData();    
-        }
+  async function loadLocationData() {
+    loadLocationStateRef.current = 'loading';
 
-        // If no subscription -> subscribe to location table changes
-        if (!subscription.current) {
-          const channel = supabase.channel('test').on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'Location',
-            },
-            (payload) => {
-              getLocationData();
-            }
-          ).subscribe((status, err) => {
-            console.log('TESTING status:', status, err);
+    const res = await request<LocationGetRes>({
+      type: 'GET',
+      route: 'api/location',
+      body: {},
+      session: sessionRef.current.data,
+    });
 
-            // Save subscription if subscription is successful
-            if (status === 'SUBSCRIBED') subscription.current = channel;
-          });
-        }
-      } catch (e: any) {
-        console.log('app/page useEffect error', e.message);
-        // TODO: Notification
-        console.log('NOTIFY: There was an issue loading the location data');
-      }
+    // Update date & location data state
+    if (res.status === 'success' && res.locations) {
+      setLocations(res.locations);
+      loadLocationStateRef.current = 'loaded';
+    } else {
+      loadLocationStateRef.current = 'unloaded';
     }
-    exec();
+  }
+
+  async function subscribeLocationData() {
+    await supabase.realtime.setAuth();
+    const channel = supabase.channel('location-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'Location',
+        },
+        (payload) => {
+          loadLocationData();
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('DEBUGGING subscription', status, err);
+        // Update subscription state!
+        if (status === 'SUBSCRIBED') subscriptionRef.current = channel;
+        else subscriptionRef.current = null;
+      });
+  }
+
+  async function checkLocationData() {
+    // Check and load missing data
+    if (!sessionRef.current.loading && sessionRef.current.data) {
+      if (loadLocationStateRef.current === 'unloaded') await loadLocationData();
+      if (subscriptionRef.current === null) await subscribeLocationData();
+    }
+  
+    // If data still missing -> initiate delay recheck
+    if (loadLocationStateRef.current !== 'unloaded' && subscriptionRef.current) {
+      clearInterval(checkLocationIntervalRef.current);
+      checkLocationIntervalRef.current = null;
+    }
+  }
+
+  // Initiate check
+  useEffect(() => {
+    // Check location data loaded on an interval, function deletes interval on condition compleition
+    if (!checkLocationIntervalRef.current) {
+      checkLocationData();
+      checkLocationIntervalRef.current = setInterval(() => checkLocationData(), 10 * 1000);
+    }
 
     // Cleanup
     return () => {
-      if (subscription.current) supabase.removeChannel(subscription.current);
+      if (checkLocationIntervalRef.current) {
+        clearInterval(checkLocationIntervalRef.current);
+        checkLocationIntervalRef.current = null;
+      }
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
     };
-  }, [session.loading, session.data, supabase]);
+  }, []);
 
   return (
     <Suspense fallback={<Loading/>}>
-      <MapMenuComponent locations={locations}></MapMenuComponent>
+      <MapMenuComponent locations={locations} session={session}></MapMenuComponent>
     </Suspense>
   );
 }

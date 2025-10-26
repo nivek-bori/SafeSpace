@@ -4684,6 +4684,7 @@ export namespace Prisma {
 
   export type LocationWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    latitude_longitude?: LocationLatitudeLongitudeCompoundUniqueInput
     AND?: LocationWhereInput | LocationWhereInput[]
     OR?: LocationWhereInput[]
     NOT?: LocationWhereInput | LocationWhereInput[]
@@ -4693,7 +4694,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Location"> | Date | string
     address?: StringFilter<"Location"> | string
     ratings?: RatingListRelationFilter
-  }, "id">
+  }, "id" | "latitude_longitude">
 
   export type LocationOrderByWithAggregationInput = {
     id?: SortOrder
@@ -5113,6 +5114,11 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type LocationLatitudeLongitudeCompoundUniqueInput = {
+    latitude: number
+    longitude: number
   }
 
   export type LocationCountOrderByAggregateInput = {

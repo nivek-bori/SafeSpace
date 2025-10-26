@@ -4,6 +4,7 @@ TODO:
   ✔ api/location @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(49s)
   ✔ api/rating @started(25-10-20 16:42) @done(25-10-20 16:42) @lasted(23s)
   ✔ components/auth/AuthProtector soft require auth @started(25-10-25 20:10) @done(25-10-25 20:10) @lasted(44s)
+  ▫ sidebar code
   ▫ components/map/MapMenu sidebar @started(25-10-24 17:01)
   ▫ components/map/
 
@@ -11,7 +12,11 @@ Sidebar:
   ▫ Location: components/map/MapMenu
   ▫ SidebarWrapper: handles nav bar and also does title and latlng subtext
   ▫ HiddenSidebar: a simple 'open sidebar' button
-  ▫ 
+  ▫ RequireAuth: a simple display for the cta 'sign in', explains that authentication is required for that feature
+  ▫ NormalSidebar: 'click on a location to see more info on it' or smthing that sounds nice
+  ▫ LocationInfoSidebar: reference canva design
+  ▫ RatingInfoSidebar: reference canva design
+  ▫ InputFormSidebar: reference canva design, recieves rating and description input
 
 User Requirements:
 	▫ Create new location + rating

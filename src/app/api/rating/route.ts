@@ -4,6 +4,7 @@ import { getUserServer, parseError } from "@/lib/util/server_util";
 import { DefaultAPIRes } from "@/types/api_types";
 import { ReducedLocation } from "@/types/types";
 import { NextResponse } from "next/server";
+import prisma from '@/lib/prisma/prisma';
 
 type PostRequestFull = {
   userId: string,
@@ -44,7 +45,8 @@ export async function POST(request: Request) {
     // Create/Get location
     let locationId = null;
     
-    if (typeof locationData === 'string') { // location exists -> get location
+    if (typeof locationData === 'string') {
+      // location id provided -> use location
       const location = await prisma.location.findUnique({
         where: {
           id: locationData,
@@ -58,21 +60,34 @@ export async function POST(request: Request) {
 
       locationId = locationData;
     } else {
-      // location doesn't exist -> create location
+      // location id not provided -> find location or create
       const { latitude, longitude, address } = locationData;
 
-      const dataQuery: any = {
+      const whereQuery: any = {
         latitude: latitude,
         longitude: longitude,
       }
-      if (address) dataQuery.address = address;
+      const updateQuery: any = {}
+      if (address) updateQuery.address = address;
+      const createQuery: any = {
+        latitude: latitude,
+        longitude: longitude,  
+      }
+      if (address) createQuery.address = address;
 
-      const location = await prisma.location.create({
-        data: dataQuery,
+      const location = await prisma.location.upsert({
+        where: {
+          latitude_longitude: {
+            latitude: latitude,
+            longitude: longitude,
+          }
+        },
+        update: updateQuery,
+        create: createQuery,
         select: {
           id: true,
         }
-      })
+      });
 
       locationId = location.id;
     }

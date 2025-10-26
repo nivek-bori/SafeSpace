@@ -159,7 +159,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, [fetchProfile]);
+  }, []);
 
   // logging
   useEffect(() => {

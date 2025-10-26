@@ -14,6 +14,23 @@ export async function convertPositionToAddress(lat: number, lng: number) {
   }
 }
 
+// ----- MAP -----
+
+export function smoothZoom(map, targetZoom: number, currentZoom: number) {
+  const zoomStep = 1.5;
+  if (Math.abs(currentZoom - targetZoom) >= zoomStep) {
+    const newZoom = currentZoom + (targetZoom > currentZoom ? zoomStep : -zoomStep);
+
+    google.maps.event.addListenerOnce(map, 'zoom_changed', () => {
+      smoothZoom(map, targetZoom, newZoom);
+    });
+
+    setTimeout(() => {
+      map.setZoom(newZoom);
+    }, zoomStep * 30); // Adjust speed here
+  }
+}
+
 // ----- MARKERS ------
 
 export function createMarkerData(document: any, hex: string) {

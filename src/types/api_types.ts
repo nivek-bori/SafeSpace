@@ -1,5 +1,5 @@
 import { Safety } from "@/lib/prisma/generated/prisma";
-import { RelationLocation, RelationProfile } from "./types";
+import { ReducedLocation, RelationLocation, RelationProfile } from "./types";
 
 export interface DefaultAPIRes {
   status: 'success' | 'error';
@@ -34,12 +34,7 @@ export type LocationGetRes = DefaultAPIRes & {
 
 // RATING
 export type RatingPostReq = {
-  locationData: string | {
-    locationName: string,
-    latitude: number,
-    longitude: number,
-    address: string | null,
-  },
+  locationData: string | ReducedLocation,
   ratingData: {
     ratingId: string | null,
     safety: Safety,

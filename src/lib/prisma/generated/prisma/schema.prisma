@@ -27,6 +27,8 @@ model Location {
   updatedAt DateTime @updatedAt
   address   String
   ratings   Rating[]
+
+  @@unique([latitude, longitude])
 }
 
 model Rating {

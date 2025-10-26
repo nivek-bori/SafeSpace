@@ -4,7 +4,7 @@ import { config } from "@/lib/config";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ReducedLocation, RelationLocation } from '@/types/types'
-import { calculateLocationColor, ClusterRenderer, convertPositionToAddress, createMarkerData, onClusterCLick } from "./MapHelper";
+import { calculateLocationColor, ClusterRenderer, convertPositionToAddress, createMarkerData, onClusterCLick, smoothZoom } from "./MapHelper";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { SidebarProps } from "./MapMenu";
 
@@ -18,9 +18,10 @@ declare global {
 interface MapProps {
   locations: RelationLocation[];
   setSidebarData: (sidebarProps: SidebarProps) => void;
+  clickLocationData: ReducedLocation;
 }
 
-export default function MapComponent({ locations, setSidebarData }: MapProps) {
+export default function MapComponent({ locations, setSidebarData, clickLocationData }: MapProps) {
   const [state, setState] = useState<'page-loading' | 'null'>('page-loading');
 
   // Map
@@ -42,7 +43,7 @@ export default function MapComponent({ locations, setSidebarData }: MapProps) {
   const handleMarkerClick = useCallback((location: RelationLocation | ReducedLocation) => {
     // Pan to and zoom onto clicked location
     mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
-    mapRef.current.setZoom(15);
+    setTimeout(() => smoothZoom(mapRef.current, 12, mapRef.current.getZoom()), 350);
 
     // Update sidebar to match
     setSidebarData({ type: 'location-info', location: location })
@@ -175,6 +176,13 @@ export default function MapComponent({ locations, setSidebarData }: MapProps) {
       renderLocations(locations);
     }
   }, [locations]);
+
+  useEffect(() => {
+    if (clickLocationData) {
+      renderLocation(clickLocationData);
+      handleMapClick(clickLocationData);
+    }
+  }, [clickLocationData]);
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">

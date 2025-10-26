@@ -7,13 +7,14 @@ import { AuthReq, DefaultAPIRes } from "@/types/api_types";
 import { request } from "@/lib/util/api";
 import GoogleAuthButton from "./GoogleButton";
 import EmailHandler from "./email/EmailHandler";
+import { X } from "lucide-react";
 
 interface GoogleAuthResponse {
   credential: string;
   [key: string]: unknown;
 }
 
-export default function AuthComponent() {
+export default function AuthComponent( { onClose }: { onClose: () => void | null}) {
   const [status, setStatus] = useState<'google-loading' | 'email-loading' | 'page-loading' | 'null'>('page-loading');
 
   const handleEmailSignIn = useCallback(async (email: string, password: string) => {
@@ -171,7 +172,8 @@ export default function AuthComponent() {
   }, [setStatus]);
 
   return (
-    <div className="flex justify-center items-center p-4 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="fixed inset-0 z-40 flex justify-center items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+      {onClose !== null && <button className='absolute right-5 top-3 w-12 h-12 rounded-[1rem] bg-gray-400 flex items-center justify-center' onClick={onClose}><X /></button>}
       <div className="p-8 w-full max-w-md bg-white rounded-lg shadow-xl">
         <EmailHandler status={status} onEmailSignIn={handleEmailSignIn} onEmailSignUp={handleEmailSignUp} />
 

@@ -62,16 +62,18 @@ export default function AuthProtecter({ children, className }: AuthProtecterProp
 
   const value = useMemo(() => ({
     requireAuth: () => { setStage('auth-required'); },
-    softRequireAuth: () => { setStage('soft-auth-required'); }
-  }), [setStage]);
+    softRequireAuth: () => { if (!profile) setStage('soft-auth-required'); }
+  }), [setStage, profile]);
 
   return <AuthContext.Provider value={value}>
     {stage === 'loading' && <LoadingComponent />}
-    {stage === 'auth-required' && <Auth />}
-    {stage === 'soft-auth-required' && (
+    {stage === 'auth-required' && <Auth onClose={null} />}
+    {(stage === 'soft-auth-required' || stage == 'success') && (
       <>
-        <button className='w-3 h-5 rounded-2xl bg-gray-300' onClick={() => setStage('success')}><X /></button>
-        <Auth />
+        {/* If soft require, add auth screen in front, but still load/keep children rendered */}
+        {stage == 'soft-auth-required' && <Auth onClose={() => setStage('success')} />} 
+        
+        <div className={cn('w-full h-full', className)}>{children}</div>
       </>
     )}
     {stage === 'success' && <div className={cn('w-full h-full', className)}>{children}</div>}
