@@ -22,7 +22,7 @@ export const config = {
     secret: process.env.NEXTAUTH_SECRET || '',
   },
   google: {
-    key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    key: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '',
     map_id: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || '',
     client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
     client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -32,5 +32,5 @@ export const config = {
 // Middleware
 export const privateRoutes: Record<string, UserRole> = {
   '/developer': 'ADMIN',
-  '/': 'USER'
+  '/testing': 'ADMIN',
 };

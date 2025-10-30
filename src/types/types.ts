@@ -1,4 +1,21 @@
+import { GoogleAccountsConfig, GoogleAuthResponse, GoogleRenderConfig } from "@/components/auth/GoogleButton";
 import { Profile, Rating, Location, Safety } from "@/lib/prisma/generated/prisma";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize?: (config: GoogleAccountsConfig) => void;
+          renderButton?: (element: HTMLElement, config: GoogleRenderConfig) => void;
+          prompt?: () => void;
+        };
+      };
+    };
+    googleAuthCallback?: (response: GoogleAuthResponse) => void;
+    gmpShadowPatched: boolean;
+  }
+}
 
 export type UserRole = 'ADMIN' | 'USER' | 'GUEST';
 

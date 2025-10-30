@@ -6,8 +6,8 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { privateRoutes } from '@/lib/config';
 import { cn, isAuthorized } from '@/lib/util/client_util';
 import Auth from './Auth';
-import LoadingComponent from '../ui/Loading';
-import { X } from 'lucide-react';
+import Loading from '../ui/Loading';
+import { useNotification } from '../ui/Notification';
 
 interface AuthProtecterProps {
   children: React.ReactNode;
@@ -30,6 +30,8 @@ export function useProtectorAuth() {
 }
 
 export default function AuthProtecter({ children, className }: AuthProtecterProps) {
+  const { addNotification } = useNotification();
+
   const [stage, setStage] = useState<'loading' | 'auth-required' | 'soft-auth-required'| 'success'>('loading');
 
   const { profile } = useAuth();
@@ -47,12 +49,14 @@ export default function AuthProtecter({ children, className }: AuthProtecterProp
       )?.[1] || 'GUEST';
 
       if (requiredRole && !isAuthorized(userRole, requiredRole)) {
-        if (profile) {
-          // NOTIFICATION: you do not have access to that, please sign in
+        if (profile.data) {
+          addNotification({ message: 'You do not have access to that', type: 'warning' });
           router.push('/');
           return;
+        } else {
+          addNotification({ message: 'You do not have access to that. Please sign in first', type: 'warning' });
+          setStage('auth-required');
         }
-        setStage('auth-required');
       } else {
         setStage('success');
       }
@@ -62,11 +66,11 @@ export default function AuthProtecter({ children, className }: AuthProtecterProp
 
   const value = useMemo(() => ({
     requireAuth: () => { setStage('auth-required'); },
-    softRequireAuth: () => { if (!profile) setStage('soft-auth-required'); }
+    softRequireAuth: () => { if (!profile?.data) setStage('soft-auth-required'); }
   }), [setStage, profile]);
 
   return <AuthContext.Provider value={value}>
-    {stage === 'loading' && <LoadingComponent />}
+    {stage === 'loading' && <Loading />}
     {stage === 'auth-required' && <Auth onClose={null} />}
     {(stage === 'soft-auth-required' || stage == 'success') && (
       <>
@@ -76,6 +80,5 @@ export default function AuthProtecter({ children, className }: AuthProtecterProp
         <div className={cn('w-full h-full', className)}>{children}</div>
       </>
     )}
-    {stage === 'success' && <div className={cn('w-full h-full', className)}>{children}</div>}
   </AuthContext.Provider>;
 }

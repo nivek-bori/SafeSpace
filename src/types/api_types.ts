@@ -36,7 +36,6 @@ export type LocationGetRes = DefaultAPIRes & {
 export type RatingPostReq = {
   locationData: string | ReducedLocation,
   ratingData: {
-    ratingId: string | null,
     safety: Safety,
     description: string,
   }

@@ -1,17 +1,19 @@
 'use client';
 
 import { config } from '@/lib/config';
+import { ADDRCONFIG } from 'dns';
 import { useEffect, useRef, useState } from 'react';
 import { FaGoogle } from 'react-icons/fa';
+import { useNotification } from '../ui/Notification';
 
-interface GoogleAccountsConfig {
+export interface GoogleAccountsConfig {
   client_id: string;
   callback: (response: GoogleAuthResponse) => void;
   auto_select?: boolean;
   itp_support?: boolean;
 }
 
-interface GoogleRenderConfig {
+export interface GoogleRenderConfig {
   type?: string;
   shape?: string;
   theme?: string;
@@ -20,29 +22,14 @@ interface GoogleRenderConfig {
   logo_alignment?: string;
 }
 
-interface GoogleAuthResponse {
+export interface GoogleAuthResponse {
   credential: string;
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        id?: {
-          initialize?: (config: GoogleAccountsConfig) => void;
-          renderButton?: (element: HTMLElement, config: GoogleRenderConfig) => void;
-          prompt?: () => void;
-        };
-      };
-    };
-    googleAuthCallback?: (response: GoogleAuthResponse) => void;
-  }
-}
-
 interface GoogleAuthButtonProps {
   handleGoogleAuthCallback: (response: GoogleAuthResponse) => void;
-  setStatus: (status: 'page-loading' | 'google-loading' | 'email-loading' | 'null') => void;
+  setStatus: (status: | 'google-loading' | 'email-loading' | 'null') => void;
   buttonUse: 'signin_with' | 'signup_with' | 'continue_with';
   buttonText: string;
 }
@@ -53,6 +40,8 @@ export default function GoogleAuthButton({
   buttonUse,
   buttonText
 }: GoogleAuthButtonProps) {
+  const { addNotification } = useNotification();
+
   const handleGoogleAuthCallbackRef = useRef(handleGoogleAuthCallback);
   const initAttemptedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,13 +58,12 @@ export default function GoogleAuthButton({
       try {
         window.google.accounts.id.prompt();
       } catch {
-        // TODO: NOTIFICATION error Google authentication is not available
-        console.log('Google authentication is not available');
-  setStatus('null')
+        addNotification({ message: 'There was an issue continuing with Google', type: 'error' });
+        setStatus('null')
       }
     } else {
-      console.error('Google Identity Services not available');
-setStatus('null')
+      addNotification({ message: 'There was an issue continuing with Google', type: 'error' });
+      setStatus('null')
     }
   };
 
@@ -177,7 +165,7 @@ setStatus('null')
             setStatus('null')
                 }, 100);
               } catch {
-                console.log('Native Google button failed, using custom button');
+                console.log('components/auth/GoogleButton initializeGoogleAuth warning: native google button failed, using custom button');
                 setUseCustomButton(true);
               }
             } else {
@@ -185,14 +173,12 @@ setStatus('null')
             }
           }, 100);
         } catch {
-          console.log('Error initializing Google Auth');
+          console.log('components/auth/GoogleButton initializeGoogleAuth error: failed to initialize Google Auth');
           setUseCustomButton(true);
-          // TODO: NOTIFICATION error Failed to initialize Google authentication
-          console.log('Failed to initialize Google authentication')
-    setStatus('null')
+          setStatus('null')
         }
       } else {
-        console.log('Google Identity Services not ready, retrying...');
+        console.log('components/auth/GoogleButton initializeGoogleAuth warning: failed to initialize Google Auth, retrying');
         setTimeout(initializeGoogleAuth, 500);
       }
     };

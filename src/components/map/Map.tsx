@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ReducedLocation, RelationLocation } from '@/types/types'
 import { calculateLocationColor, ClusterRenderer, convertPositionToAddress, createMarkerData, onClusterCLick, smoothZoom } from "./MapHelper";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import { SidebarProps } from "./MapMenu";
 
 declare global {
   interface Window {
@@ -17,11 +16,12 @@ declare global {
 
 interface MapProps {
   locations: RelationLocation[];
-  setSidebarData: (sidebarProps: SidebarProps) => void;
-  clickLocationData: ReducedLocation;
+  setSidebarType: (any) => void;
+  selectedLocation: ReducedLocation;
+  setSelectedLocation: (any) => void;
 }
 
-export default function MapComponent({ locations, setSidebarData, clickLocationData }: MapProps) {
+export default function MapComponent({ locations, setSidebarType, selectedLocation, setSelectedLocation }: MapProps) {
   const [state, setState] = useState<'page-loading' | 'null'>('page-loading');
 
   // Map
@@ -30,24 +30,45 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
 
   // Markers
   const markersRef = useRef<any>(null); // Reference to all location's markers
+  const markerClusterRef = useRef<any>(null);
   
   // Click data
   const clickMarkerRef = useRef<any>(null); // Reference to current click's marker
+  const mapClickRef = useRef<RelationLocation | ReducedLocation>(null);
 
-  // user interaction
-  const handleMapClick = useCallback((location: RelationLocation | ReducedLocation) => {
-    // Potentially zoom onto click location
-    setSidebarData({ type: 'input-form', location: location }); // display the appropriate sidebar
-  }, [setSidebarData]);
-
-  const handleMarkerClick = useCallback((location: RelationLocation | ReducedLocation) => {
-    // Pan to and zoom onto clicked location
+  function zoomAndPan(location: RelationLocation | ReducedLocation | null) {
     mapRef.current.panTo({ lat: location.latitude, lng: location.longitude });
     setTimeout(() => smoothZoom(mapRef.current, 12, mapRef.current.getZoom()), 350);
+  }
 
-    // Update sidebar to match
-    setSidebarData({ type: 'location-info', location: location })
-  }, [setSidebarData]);
+  // user interaction
+  const handleMapClick = useCallback((location: RelationLocation | ReducedLocation, render?: boolean) => {
+    // Potentially zoom onto click location
+    setSidebarType('input-form'); // display the appropriate sidebar
+    setSelectedLocation(location); // update
+    mapClickRef.current = location; // store internal click
+
+    if (render !== false) {
+      renderLocation(location);
+    }
+  }, [setSidebarType]);
+
+  const handleMarkerClick = useCallback((location: RelationLocation | ReducedLocation) => {
+    zoomAndPan(location); // Pan to and zoom onto clicked location
+    setSidebarType('location-info');
+    setSelectedLocation(location);
+    mapClickRef.current = location; // store internal click
+
+    handleClearClickMarker();
+  }, [setSidebarType, setSelectedLocation]);
+
+  const handleClearClickMarker = useCallback(() => {
+    // clear all click location markers
+    if (clickMarkerRef.current) {
+      clickMarkerRef.current.setMap(null);
+      clickMarkerRef.current = null;
+    }
+  }, []);
 
   // render location's markers onto map
   const renderLocations = useCallback(async (locations: ReducedLocation[]) => {
@@ -55,6 +76,11 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
     if (markersRef.current) {
       markersRef.current.forEach((marker: any) => marker.setMap(null));
       markersRef.current = null;
+    }
+    // clear marker cluster
+    if (markerClusterRef.current) {
+      markerClusterRef.current.clearMarkers();
+      markerClusterRef.current = null;
     }
 
     const { AdvancedMarkerElement } = (await google.maps.importLibrary('marker')) as google.maps.MarkerLibrary;
@@ -78,16 +104,16 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
 
       return marker;
     });
-
     markersRef.current = markers;
 
-    // Create cluster render
-    new MarkerClusterer({ markers, map: mapRef.current, renderer: new ClusterRenderer(), onClusterClick: onClusterCLick });
+    // create cluster render
+    const markerCluster = new MarkerClusterer({ markers, map: mapRef.current, renderer: new ClusterRenderer(), onClusterClick: onClusterCLick });
+    markerClusterRef.current = markerCluster;
   }, [handleMarkerClick, calculateLocationColor, createMarkerData, onClusterCLick]);
 
   // render click's marker onto map
   const renderLocation = useCallback(async (location: ReducedLocation) => {
-    // clear all location's markers
+    // clear all click location markers
     if (clickMarkerRef.current) {
       clickMarkerRef.current.setMap(null);
       clickMarkerRef.current = null;
@@ -108,7 +134,7 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
     marker.loc = location;
 
     // handle marker click (zoom onto click, display input-form sidebar because no actual location data on this marker)
-    marker.addListener('click', () => handleMapClick(location));
+    marker.addListener('click', () => handleMapClick(location, false));
 
     clickMarkerRef.current = marker;
   }, [handleMapClick, createMarkerData]);
@@ -158,7 +184,6 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
               longitude: e.latLng.lng(),
               address: await convertPositionToAddress(e.latLng.lat(), e.latLng.lng()),
             }
-            renderLocation(location); // Render the new marker
             handleMapClick(location); // Handle the click on map
           }
         });
@@ -170,19 +195,24 @@ export default function MapComponent({ locations, setSidebarData, clickLocationD
     setState('null');
   }, [renderLocation, handleMapClick, convertPositionToAddress, setState]);
 
-  // render any changes to location
+  // Click data comes from the outside. Render click, zoom and pan
   useEffect(() => {
-    if (locations) {
-      renderLocations(locations);
+    // console.log('TESTING click location update', selectedLocation);
+    
+    if (!selectedLocation) {
+      // If no selected location => dont render
+      handleClearClickMarker();
+    } else if (selectedLocation.latitude !== mapClickRef.current?.latitude || selectedLocation.longitude !== mapClickRef.current?.longitude) {
+      // If selected location isn't the map clicked location (already rendered) => render
+      renderLocation(selectedLocation)
+      zoomAndPan(selectedLocation);
     }
-  }, [locations]);
+  }, [selectedLocation, renderLocation, handleClearClickMarker]);
 
   useEffect(() => {
-    if (clickLocationData) {
-      renderLocation(clickLocationData);
-      handleMapClick(clickLocationData);
-    }
-  }, [clickLocationData]);
+    // console.log('TESTING location update', locations);
+    if (locations) renderLocations(locations);
+  }, [locations]);
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">

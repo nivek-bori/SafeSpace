@@ -5,6 +5,7 @@ import { DefaultAPIRes } from "@/types/api_types";
 import { ReducedLocation } from "@/types/types";
 import { NextResponse } from "next/server";
 import prisma from '@/lib/prisma/prisma';
+import { roundDecimalPlace } from "@/lib/util/util";
 
 type PostRequestFull = {
   userId: string,
@@ -24,28 +25,29 @@ export async function POST(request: Request) {
     // Data
     const body = await request.json();
 
-    const props: PostRequestFull = {
+    const props = {
       userId: user.id,
       locationData: body.locationId || {
-        latitude: body.latitude,
-        longitude: body.longitude,
-        address: body.address || null,
+        latitude: roundDecimalPlace(body.locationData.latitude, 3),
+        longitude: roundDecimalPlace(body.locationData.longitude, 3),
+        address: body.locationData.address || null,
       },
       ratingData: {
-        ratingId: body.ratingId,
-        safety: body.safety,
-        description: body.description,
+        safety: body.ratingData.safety,
+        description: body.ratingData.description,
       }
     };
-    const props_error = verifyBody(props, 'api/rating post');
+
+    const props_error = verifyBody<PostRequestFull>(props, 'api/rating post');
     if (props_error) return props_error;
 
     const { userId, locationData, ratingData } = props;
 
     // Create/Get location
     let locationId = null;
+    const locationCreated = typeof locationData !== 'string';
     
-    if (typeof locationData === 'string') {
+    if (!locationCreated) {
       // location id provided -> use location
       const location = await prisma.location.findUnique({
         where: {
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       });
 
       if (!location) {
-        console.log(`api/rating post error: Provided location id not found ${locationData}`);
+        console.log(`api/rating post error: provided location id not found ${locationData}`);
         return NextResponse.json<DefaultAPIRes>({ status: 'error', message: 'There was an issue saving your rating' }, {status: 400});
       }
 
@@ -64,8 +66,10 @@ export async function POST(request: Request) {
       const { latitude, longitude, address } = locationData;
 
       const whereQuery: any = {
-        latitude: latitude,
-        longitude: longitude,
+        latitude_longitude: {
+            latitude: latitude,
+            longitude: longitude,
+          }
       }
       const updateQuery: any = {}
       if (address) updateQuery.address = address;
@@ -76,12 +80,7 @@ export async function POST(request: Request) {
       if (address) createQuery.address = address;
 
       const location = await prisma.location.upsert({
-        where: {
-          latitude_longitude: {
-            latitude: latitude,
-            longitude: longitude,
-          }
-        },
+        where: whereQuery,
         update: updateQuery,
         create: createQuery,
         select: {
@@ -89,15 +88,23 @@ export async function POST(request: Request) {
         }
       });
 
+      if (!location.id) {
+        console.log('api/rating post error: failed to create new location');
+        return NextResponse.json<DefaultAPIRes>({status: 'error', message: 'There was an issue saving your rating'}, {status: 400});
+      }
+
       locationId = location.id;
     }
 
     // Create/edit rating on location
-    const { ratingId, safety, description } = ratingData;
+    const { safety, description } = ratingData;
 
     const rating = await prisma.rating.upsert({
       where: {
-        id: ratingId || '',
+        profileId_locationId: {
+          profileId: userId,
+          locationId: locationId,
+        }
       },
       update: {
         safety: safety,
@@ -108,14 +115,29 @@ export async function POST(request: Request) {
         description: description,
         profileId: userId,
         locationId: locationId,
+      },
+      select: {
+        id: true,
       }
     });
+
+    if (!rating) {
+      // if failed to create rating & location was created -> delete location
+      if (locationCreated) {
+        await prisma.location.delete({
+          where: {
+            id: locationId,
+          }
+        });
+      }
+      return NextResponse.json<DefaultAPIRes>({status: 'error', message: 'There was an issue saving your rating'}, {status: 500})
+    }
 
 		// Logic
 		return NextResponse.json<DefaultAPIRes>({status: 'success', message: ''});
   } catch (e: any) {
     console.log('api/rating post error')
     await parseError(e.message, e.code);
-    return NextResponse.json<DefaultAPIRes>({status: 'error', message: 'There was an issue MESSAGE'});
+    return NextResponse.json<DefaultAPIRes>({status: 'error', message: 'There was an issue saving your rating'});
   }
 }

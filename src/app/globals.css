@@ -3,3 +3,7 @@
 html, body {
   height: 100%;
 }
+
+* {
+  font-family: var(--font-nunito), 'Comic Neue', 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}

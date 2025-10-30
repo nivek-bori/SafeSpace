@@ -26,13 +26,7 @@ export default function Home() {
   // Track session data in ref
   useEffect(() => {
     sessionRef.current = session;
-  }, [locations]);
-  // // Track location data state in ref
-  // useEffect(() => {
-  //   if (loadLocationStateRef.current !== 'loading') {
-  //     loadLocationStateRef.current = (location) ? 'loaded' : 'unloaded';
-  //   }
-  // }, [locations]);
+  }, [session]);
 
   async function loadLocationData() {
     loadLocationStateRef.current = 'loading';
@@ -46,9 +40,11 @@ export default function Home() {
 
     // Update date & location data state
     if (res.status === 'success' && res.locations) {
+      console.log('TESTING load locations', res.locations);
       setLocations(res.locations);
       loadLocationStateRef.current = 'loaded';
     } else {
+      console.log('app/ loadLocationData error', res.message);
       loadLocationStateRef.current = 'unloaded';
     }
   }
@@ -65,6 +61,7 @@ export default function Home() {
         },
         (payload) => {
           loadLocationData();
+          if (!payload.errors) console.log('Successful payload', payload);
         }
       )
       .subscribe((status, err) => {
@@ -77,12 +74,10 @@ export default function Home() {
 
   async function checkLocationData() {
     // Check and load missing data
-    if (!sessionRef.current.loading && sessionRef.current.data) {
-      if (loadLocationStateRef.current === 'unloaded') await loadLocationData();
-      if (subscriptionRef.current === null) await subscribeLocationData();
-    }
+    if (loadLocationStateRef.current === 'unloaded') await loadLocationData();
+    if (subscriptionRef.current === null) await subscribeLocationData();
   
-    // If data still missing -> initiate delay recheck
+    // If data not missing -> clear interval
     if (loadLocationStateRef.current !== 'unloaded' && subscriptionRef.current) {
       clearInterval(checkLocationIntervalRef.current);
       checkLocationIntervalRef.current = null;
@@ -111,7 +106,7 @@ export default function Home() {
   }, []);
 
   return (
-    <Suspense fallback={<Loading/>}>
+    <Suspense fallback={<Loading />}>
       <MapMenuComponent locations={locations} session={session}></MapMenuComponent>
     </Suspense>
   );

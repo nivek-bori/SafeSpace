@@ -8,14 +8,17 @@ import { request } from "@/lib/util/api";
 import GoogleAuthButton from "./GoogleButton";
 import EmailHandler from "./email/EmailHandler";
 import { X } from "lucide-react";
+import { useNotification } from "../ui/Notification";
 
 interface GoogleAuthResponse {
   credential: string;
   [key: string]: unknown;
 }
 
-export default function AuthComponent( { onClose }: { onClose: () => void | null}) {
-  const [status, setStatus] = useState<'google-loading' | 'email-loading' | 'page-loading' | 'null'>('page-loading');
+export default function AuthComponent({ onClose }: { onClose: () => void | null }) {
+  const { addNotification, addNotificationStatus } = useNotification();
+
+  const [status, setStatus] = useState<'google-loading' | 'email-loading' | 'null'>('null');
 
   const handleEmailSignIn = useCallback(async (email: string, password: string) => {
     setStatus('email-loading');
@@ -23,9 +26,10 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
     try {
       // Data validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email))
-        // TODO: NOTIFICATION - 'Please enter a valid email address'
+      if (!emailRegex.test(email)) {
+        addNotification({ message: 'Please enter a vaild email address', type: 'warning' });
         return;
+      }
 
       // Supabase auth
       const { data: auth_data, error: auth_error } = await supabase.auth.signInWithPassword({
@@ -36,17 +40,15 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
       // Auth errors
       if (auth_error) {
         parseError(auth_error.message, auth_error.code);
-        // TODO: NOTIFICATION: error There was an issue signing in with Google
-        console.log('There was an issue signing in');
+        addNotification({ message: 'There was an issue signing in. Sign up instead?', type: 'error' });
       }
       if (!auth_data.user || !auth_data.user.id) {
-        // TODO: NOTIFICATION: error There was an issue signing in with Google
-        console.log('There was an issue signing in');
+        addNotification({ message: 'There was an issue signing in. Sign up instead?', type: 'error' });
       }
 
     } catch (e: any) {
       console.log('/components/auth/auth handleEmailSignIn error', await parseError(e.message, e.code));
-      // TODO: NOTIFICATION: There was an issue signing in
+      addNotification({ message: 'There was an issue signing in. Sign up instead?', type: 'error' });
     } finally {
       setStatus('null');
     }
@@ -59,12 +61,12 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        // TODO: NOTIFICATION - 'Please enter a valid email address'
+        addNotification({ message: 'Please enter a vaild email address', type: 'warning' })
         return;
       }
 
       if (password !== confirmPassword) {
-        // TODO: NOTIFICATION - 'Passwords do not match'
+        addNotification({ message: 'Passwords do not match', type: 'warning' })
         return;
       }
 
@@ -74,24 +76,19 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
         password: password,
       });
       const signUp = !auth_data.user;
-      console.log('DEBUGGING 1', signUp, auth_data);
 
       // If no auth user -> sign up
       if (signUp) {
         ({ data: auth_data, error: auth_error } = await supabase.auth.signUp({ email: email, password: password }));
 
-        console.log('DEBUGGING 2', auth_data, auth_error);
-
         // Auth errors
         if (auth_error) {
           parseError(auth_error.message, auth_error.code);
-          // TODO: NOTIFICATION: error There was an issue signing in with Google
-          console.log('There was an issue signing in with Google');
+          addNotification({ message: 'There was an issue signing up', type: 'error' });
           return;
         }
         if (!auth_data.user || !auth_data.user.id) {
-          // TODO: NOTIFICATION: error There was an issue signing in with Google
-          console.log('There was an issue signing in with Google');
+          addNotification({ message: 'There was an issue signing up', type: 'error' });
           return;
         }
       }
@@ -109,7 +106,7 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
         body: body
       });
 
-      // TODO: NOTIFICATION - res.status
+      addNotificationStatus(res);
 
       // If no user and sign up through api/auth successful -> sign 
       if (res.status === 'success' && signUp) {
@@ -120,7 +117,7 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
       }
     } catch (e: any) {
       console.log('/components/auth/auth handleEmailSignUp error', await parseError(e.message, e.code));
-      // TODO: NOTIFICATION: error There was an issue signgin in with Google
+      addNotification({ message: 'There was an issue signing up', type: 'error' });
     } finally {
       setStatus('null');
     }
@@ -140,13 +137,11 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
       // Auth errors
       if (auth_error) {
         parseError(auth_error.message, auth_error.code);
-        // TODO: NOTIFICATION: error There was an issue signing in with Google
-        console.log('There was an issue signing in with Google');
+        addNotification({ message: 'There was an issue continuing with Google', type: 'error' });
         return;
       }
       if (!auth_data.user || !auth_data.user.id) {
-        // TODO: NOTIFICATION: error There was an issue signing in with Google
-        console.log('There was an issue signing in with Google');
+        addNotification({ message: 'There was an issue continuing with Google', type: 'error' });
         return;
       }
 
@@ -162,10 +157,10 @@ export default function AuthComponent( { onClose }: { onClose: () => void | null
         body: body
       });
 
-      /// TODO: NOTIFICIATION: res.status
+      addNotificationStatus(res);
     } catch (e: any) {
       console.log('/components/auth/auth handleGoogleAuth error', await parseError(e.message, e.code));
-      // TODO: NOTIFICATION: error There was an issue signgin in with Google
+      addNotification({ message: 'There was an issue continuing with Google', type: 'error' });
     } finally {
       setTimeout(() => setStatus('null'), 10 * 1000);
     }

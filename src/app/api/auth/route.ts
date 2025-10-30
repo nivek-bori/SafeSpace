@@ -23,8 +23,6 @@ export async function POST(request: Request) {
   if (bodyError) return bodyError;
 
   const { userId, email, name } = props;
-  
-  const supabase = await createServerSupabaseClient();
 
   try {
     let createQuery: any = {

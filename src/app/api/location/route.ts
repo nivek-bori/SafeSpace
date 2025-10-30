@@ -1,9 +1,9 @@
 
 import { verifyBody } from "@/lib/util/api";
-import { getUserServer, parseError } from "@/lib/util/server_util";
-import { DefaultAPIRes, LocationGetRes } from "@/types/api_types";
-import { RelationLocation } from "@/types/types";
+import { parseError } from "@/lib/util/server_util";
+import { LocationGetRes } from "@/types/api_types";
 import { NextResponse } from "next/server";
+import prisma from '@/lib/prisma/prisma';
 
 type GetRequestFull = {
   locationId: string | null;
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const SP_locationId = searchParams.get('locationId');
 
-    const props: GetRequestFull = { locationId: SP_locationId };
-    const props_error = verifyBody(props, 'api/location get');
+    const props = { locationId: SP_locationId };
+    const props_error = verifyBody<GetRequestFull>(props, 'api/location get');
     if (props_error) return props_error;
 
     const { locationId } = props;
