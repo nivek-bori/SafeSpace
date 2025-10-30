@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { privateRoutes } from '@/lib/config';
 import { cn, isAuthorized } from '@/lib/util/client_util';
 import Auth from './Auth';
-import Loading from '../ui/Loading';
+import Loading from '../ui/loading';
 import { useNotification } from '../ui/Notification';
 
 interface AuthProtecterProps {
