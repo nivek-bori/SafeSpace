@@ -1,7 +1,6 @@
 'use client';
 
 import { config } from '@/lib/config';
-import { ADDRCONFIG } from 'dns';
 import { useEffect, useRef, useState } from 'react';
 import { FaGoogle } from 'react-icons/fa';
 import { useNotification } from '../ui/Notification';

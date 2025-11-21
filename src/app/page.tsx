@@ -7,7 +7,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { request } from '@/lib/util/api';
 import { LocationGetRes } from '@/types/api_types';
 import { RelationLocation } from '@/types/types';
-import Loading from '@/components/ui/loading';
+import Loading from '@/components/ui/Loading';
 import { supabase } from '@/lib/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { checkIsAppPPREnabled } from 'next/dist/server/lib/experimental/ppr';

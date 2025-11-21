@@ -1,18 +1,5 @@
 TODO:
-  ✔ api/auth @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(27s)
-  ✔ api/profile @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(31s)
-  ✔ api/location @started(25-10-20 16:41) @done(25-10-20 16:41) @lasted(49s)
-  ✔ api/rating @started(25-10-20 16:42) @done(25-10-20 16:42) @lasted(23s)
-  ✔ components/auth/AuthProtector soft require auth @started(25-10-25 20:10) @done(25-10-25 20:10) @lasted(44s)
-  ✔ sidebar code @started(25-10-29 15:44) @done(25-10-29 15:44) @lasted(57s)
-  ✔ SidebarWrapper @started(25-10-29 14:40) @done(25-10-29 14:59) @lasted(19m42s)
-  ✔ RatingInfoSidebar @started(25-10-26 23:35) @done(25-10-26 23:35) @lasted(46s)
-  ✔ LocationInfoSidebar @started(25-10-26 23:35) @done(25-10-27 23:38) @lasted(1d3m51s)
-  ✔ InputFormSidebar @started(25-10-27 23:38) @done(25-10-29 10:36) @lasted(1d10h58m41s)
-  ✔ Require auth sidebar @started(25-10-29 10:36) @done(25-10-29 11:02) @lasted(26m23s)
-  ✔ NormalSidebar @started(25-10-29 15:44) @done(25-10-29 15:44) @lasted(54s)
-  ✔ Notification @started(25-10-29 16:05) @done(25-10-29 16:05) @lasted(51s)
-  ✔ Loading @started(25-10-29 12:50) @done(25-10-29 12:50) @lasted(41s)
+  ▫ fix inaccurate avg rating
   ▫ In icon sizes, account for the fact that rem changes, but size scalars dont
 
 Sidebar:
